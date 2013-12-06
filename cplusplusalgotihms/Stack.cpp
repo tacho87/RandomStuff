@@ -1,4 +1,4 @@
-/*#include <iostream>
+#include <iostream>
 #include <string>
 using namespace std;
 //Stack is a linked list implementation using FIFO FIRST IN FIRST OUT APPROACH.
@@ -113,4 +113,3 @@ int main()
 
 	return 0;
 }
-*/

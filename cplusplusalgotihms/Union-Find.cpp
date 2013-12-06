@@ -1,4 +1,4 @@
-/*
+
 #include <iostream>
 
 class QuickUnionFind
@@ -106,4 +106,3 @@ QuickUnionFind::~QuickUnionFind()
 {
 	delete[] ID;
 }
-*/
