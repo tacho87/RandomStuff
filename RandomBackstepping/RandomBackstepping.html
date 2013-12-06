@@ -1,0 +1,417 @@
+﻿<!DOCTYPEhtml>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <script>
+        //**********************************************************************
+
+
+        var helpers = {
+
+            get2DPythagoreanDistance: function (start, end) {
+                var result = Math.pow((start.x - end.x), 2) + Math.pow((start.y - end.y), 2);
+                return  Math.sqrt(result);
+            }
+
+        };
+
+        //Node Class
+        function node() {
+            var x;
+            var y;
+            var color;
+            var nodeId;
+            var walkable;
+            var maxGridX;
+            var maxGridY;
+            var width;
+            var height;
+
+            this.setNodeId = function (o) {
+                nodeId = o;
+            };
+            this.getNodeId = function () {
+                return nodeId;
+            };
+            this.setWalkable = function (o) {
+                walkable = o.walkable;
+            };
+            this.getWalkable = function () {
+                return walkable;
+            };
+            this.getX = function () {
+                return x;
+            };
+            this.getY = function () {
+                return y;
+            };
+            this.getColor = function () {
+                return color;
+            };
+            this.setColor = function (o) {
+                color = o.color;
+            };
+            this.node = function (o) {
+                x = o.x;
+                y = o.y;
+                color = o.color;
+                nodeId = o.nodeId;
+                walkable = o.walkable;
+                maxGridX = o.maxX;
+                maxGridY = o.maxY;
+                width = o.width;
+                height = o.height;
+
+            };
+            this.getNorthNode = function () {
+                return nodeId - maxGridX;
+            };
+            this.getSouthNode = function () {
+                return nodeId + maxGridX;
+            };
+            this.getEastNode = function () {
+                return nodeId + 1;
+            };
+            this.getWestNode = function () {
+                return nodeId - 1;
+            };
+            this.getNorthWestNode = function () {
+                return (nodeId - 1) - maxGridX;
+            };
+            this.getSouthWestNode = function () {
+                return (nodeId - 1) + maxGridX;
+            };
+            this.getNorthEastNode = function () {
+                return (nodeId + 1) - maxGridX;
+            };
+            this.getSouthEastNode = function () {
+                return (nodeId + 1) + maxGridX;
+            };
+            this.getNeighborNodes = function (diagonals) {
+                var nodes = [];
+                nodes.push(this.getNorthNode());
+                nodes.push(this.getSouthNode());
+                nodes.push(this.getEastNode());
+                nodes.push(this.getWestNode());
+                if (diagonals) {
+                    nodes.push(this.getNorthEastNode());
+                    nodes.push(this.getNorthWestNode());
+                    nodes.push(this.getSouthEastNode());
+                    nodes.push(this.getSouthWestNode());
+                }
+                return nodes;
+            }
+
+
+        }
+
+        //Nodes display class
+        function drawNodes() {
+            this.render = function (array) {
+                var Container = document.createElement('div');
+                Container.id = 'container';
+                for (var i = 0; i < array.length; i++) {
+                    var div = document.createElement('div');
+                    div.id = i;
+                    div.innerHTML = i + '<br />' + array[i].getWalkable().toString();
+                    div.setAttribute('style', 'border:solid;position:absolute;border-color:#e9a06c; top:' + (array[i].getY() * GLOBALS.height) + 'px;left:' + (array[i].getX() * GLOBALS.width) + 'px; width:' + GLOBALS.width + 'px; height:' + GLOBALS.height + 'px; background-color:' + array[i].getColor());
+                    //Pathfinding
+                    div.ondblclick = function (event) {
+                        if (NODESTOSEARCH.start == -1) {
+                            NODESTOSEARCH.start = event.target.id;
+                            var div = document.getElementById(event.target.id);
+                            div.innerHTML = "Start";
+                            div.style.backgroundColor = "green";
+
+
+                        }
+                        else if (NODESTOSEARCH.goal == -1) {
+                            NODESTOSEARCH.goal = event.target.id;
+                            var div = document.getElementById(event.target.id);
+                            div.innerHTML = "Goal";
+                            div.style.backgroundColor = "red";
+                            GLOBALS.ValidToRun = true;
+                        }
+
+                    };
+                    div.setAttribute('onclick', 'wall(event)');
+                    Container.appendChild(div);
+                }
+                document.body.appendChild(Container);
+            };
+        }
+
+        //Adds wall
+        function wall(event) {
+            nodes[event.target.id].setColor({ color: "black" });
+            nodes[event.target.id].setWalkable({ walkable: false });
+            var div = document.getElementById(event.target.id);
+            div.innerHTML = event.target.id + '<br />' + nodes[event.target.id].getWalkable().toString();
+            div.style.backgroundColor = nodes[event.target.id].getColor();
+            div.style.color = "white";
+        }
+
+        function createNodes() {
+            //Delete previews nodes
+            if (nodes.length > 0) {
+                nodes.length = 0;
+                var destroyTable = function () {
+                    var container = document.getElementById('container');
+                    document.body.removeChild(container);
+                };
+                destroyTable();
+            }
+
+            //create nodes
+            for (var y = 0; y < GLOBALS.maxY; y++) {
+                for (var x = 0; x < GLOBALS.maxX; x++) {
+                    var tempNode = new node();
+                    tempNode.node({ "x": x, "y": y, "color": GLOBALS.defaultColor, "nodeId": (x + y * GLOBALS.maxX), "walkable": true, "maxX": GLOBALS.maxX, "maxY": GLOBALS.maxY, "width": GLOBALS.width, "height": GLOBALS.height })
+                    nodes[x + y * GLOBALS.maxX] = tempNode;
+                    tempNode = null;
+                }
+            }
+            //display them on the site
+            var DrawNodes = new drawNodes();
+            DrawNodes.render(nodes);
+
+            GLOBALS.ValidToRun = false;
+            //pathfinding
+            NODESTOSEARCH.start = -1;
+            NODESTOSEARCH.goal = -1;
+        }
+
+        function controls() {
+
+            (function ClearScreen() {
+
+                var type = document.createElement('input');
+                type.id = 'ClearScreen';
+                type.type = 'button';
+                type.value = "Clear Screen";
+                type.onclick = function (event) {
+                    //document.location.reload(true);
+                    createNodes();
+                };
+                document.body.appendChild(type);
+
+            })();
+            (function Diagonal() {
+                var type = document.createElement('input');
+                type.id = 'diagonal';
+                type.type = 'button';
+                type.value = "Include Diagonals";
+                // type.setAttribute('style', '; top:' + (window.outerHeight - 200) + 'px;');
+                type.onclick = function () {
+                    GLOBALS.Diagonals = !GLOBALS.Diagonals;
+                    if (GLOBALS.Diagonals) {
+                        this.value = "Remove Diagonals";
+                    } else {
+                        this.value = "Include Diagonals";
+                    }
+                };
+                document.body.appendChild(type);
+
+            })();
+            (function Dimension() {
+
+                var type = document.createElement('input');
+                type.id = 'Dimensions';
+                type.type = 'button';
+                type.value = "Set Dimensions";
+                type.onclick = function () {
+                    GLOBALS.maxX =parseInt( prompt('Set maxX: (How many columns)', GLOBALS.maxX));
+                    GLOBALS.maxY = parseInt(prompt('Set maxY: (How many rows)', GLOBALS.maxY));
+                    GLOBALS.width = parseInt(prompt('Set width: (square width)', GLOBALS.width));
+                    GLOBALS.height = parseInt(prompt('Set height: (square height)', GLOBALS.height));
+                    createNodes();
+                };
+                document.body.appendChild(type);
+
+            })();
+
+            (function Run() {
+
+                var type = document.createElement('input');
+                type.id = 'run';
+                type.type = 'button';
+                type.value = "Run Simulation";
+                type.onclick = function () {
+                    if (GLOBALS.ValidToRun) {
+                        algorithm();
+                    }
+                };
+                document.body.appendChild(type);
+
+            })();
+
+        }
+        //************************************************************************************************************
+
+        var GLOBALS = {
+            maxX: 10,
+            maxY: 11,
+            width: 50,
+            height: 50,
+            QUEUE: true,
+            Diagonals: false,
+            defaultColor: "white",
+            ValidToRun: false
+        };
+        //global array so the code doesn't look that messy
+        var nodes = new Array();
+        window.onload = function () {
+            controls();
+            createNodes();
+        };
+        //*************Algorithm **************************************************************
+
+        var NODESTOSEARCH = {
+            start: -1,
+            goal: -1
+        };
+        function algorithm() { 
+            randomBackStepping();
+
+        }
+
+
+
+        //RANDOM BACKSTEPPING
+        function randomBackStepping() {
+            var exitExec = 10000;
+            while (NODESTOSEARCH.start != NODESTOSEARCH.goal && exitExec >= 0) {
+                var next = NODESTOSEARCH.start;
+                var goal = NODESTOSEARCH.goal;
+
+                //Find closest node to location
+                next = getClosestNode(next, goal);
+
+               
+                if (next == goal) {
+                    document.getElementById('status').innerHTML = "Path Found!";
+                    return true;
+                } else {
+                    while (!nodes[next].getWalkable() && exitExec >= 0) {
+                        //Not checking for repeated indexes
+                        var neighbors = nodes[NODESTOSEARCH.start].getNeighborNodes(GLOBALS.Diagonals);
+                        var n = Math.floor((Math.random() * neighbors.length));
+                        next = nodes[neighbors[n]].getNodeId();
+
+                    }
+                }
+                NODESTOSEARCH.start = next;
+                document.getElementById(NODESTOSEARCH.start).style.backgroundColor = "#617378";
+                exitExec--
+            }
+            if (exitExec <= 0) {
+                document.getElementById('status').innerHTML = "Could not find path!";
+            }
+        }
+
+
+
+
+        //Get closest Node (use for other algorithms)
+        function getClosestNode(next, goal) {
+            var resultNodeId;
+            var currentNode = nodes[next];
+            var goalNode = nodes[goal];
+            var neighbors = currentNode.getNeighborNodes(GLOBALS.Diagonals);
+
+            var distance = helpers.get2DPythagoreanDistance(
+                {
+                    x: currentNode.getX(),
+                    y: currentNode.getY()
+                },
+                {
+                    x: goalNode.getX(),
+                    y: goalNode.getY()
+                });
+
+            for (var i = 0; i < neighbors.length; i++) {
+                var tempDist = helpers.get2DPythagoreanDistance(
+                                {
+                                    x: nodes[neighbors[i]].getX(),
+                                    y: nodes[neighbors[i]].getY()
+                                },
+                                {
+                                    x: goalNode.getX(),
+                                    y: goalNode.getY()
+                                });
+
+                if (tempDist < distance) {
+                    distance = tempDist;
+                    resultNodeId = nodes[neighbors[i]].getNodeId();
+                }
+
+
+            }
+
+            console.log("resultNodeId: " + resultNodeId + "  Distance: " + distance);
+            return resultNodeId;
+        };
+
+
+
+
+
+
+    </script>
+    <style>
+        body {
+            color: #efecea;
+            margin: 5px;
+            width: 90%;
+            background-color: #617378;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        input {
+            width: 150px;
+            height: 30px;
+        }
+
+        #container {
+            position: relative;
+            margin-left: 30px;
+        }
+
+        div {
+            font-size: small;
+            margin: auto;
+            color: black;
+        }
+
+            div:hover {
+                cursor: hand;
+                cursor: pointer;
+                color: red;
+            }
+
+        h1 {
+            font-size: medium;
+        }
+
+        h2 {
+            font-size: small;
+        }
+    </style>
+</head>
+<body>
+    <h2>
+        <pre>
+        <h1>Pathfinding:  Random Backstepping! (Ignore messy code, will refactor later)</h1>
+        1. Click a square to place a wall!
+        2. Double Click to set starting point!
+        3. Double Click to set destination point!
+        </pre>
+    </h2>
+    <h3 id="status"></h3>
+</body>
+</html>
