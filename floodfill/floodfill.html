@@ -1,0 +1,292 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+
+    <script>
+
+        //Node Class
+        function node() {
+            var x;
+            var y;
+            var color;
+            var nodeId;
+            this.setNodeId = function ( o ) {
+                nodeId = o;
+            };
+            this.getNodeId = function () {
+                return nodeId;
+            };
+            this.getX = function () {
+                return x;
+            };
+            this.getY = function () {
+                return y;
+            };
+            this.getColor = function () {
+                return color;
+            };
+            this.setColor = function ( o ) {
+                color = o.color;
+            };
+            this.node = function ( o ) {
+                x = o.x;
+                y = o.y;
+                color = o.color;
+                nodeId = o.nodeId;
+            };
+
+
+        }
+
+        //Nodes visual class
+        function VisualTable() {
+            this.createNodes = function ( array ) {
+                var Container = document.createElement( 'div' );
+                Container.id = 'container';
+
+
+                for ( var i = 0; i < array.length; i++ ) {
+                    var div = document.createElement( 'div' );
+                    div.id = i;
+                    //div.innerHTML = i + '<br />' + array[i].getColor().toString();
+                    div.setAttribute( 'style', 'border:solid;position:absolute; top:' + ( array[i].getY() * height ) + 'px;left:' + ( array[i].getX() * width ) + 'px; width:' + width + 'px; height:' + height + 'px; background-color:' + array[i].getColor() );
+                    //5 Calls floodfill main function to process the algorithm... Change function name for other types of algorithms
+                    div.setAttribute( 'ondblclick', 'floodFill_Main(event)' );
+                    div.setAttribute( 'onclick', 'wall(event)' );
+                    Container.appendChild( div );
+                }
+                document.body.appendChild( Container );
+            };
+        }
+
+        //1 Globals (Macros)
+        var maxX = 30;
+        var maxY = 18;
+        var width = 30;
+        var height = 30;
+        //2 or array (no repository to keep it simple)
+        var nodes = new Array();
+        var QUEUE = true;
+        var Diagonals = false;
+
+        window.onload = function () {
+
+            //Create Controls
+
+
+            //3 Array Allocation
+            for ( var y = 0; y < maxY; y++ ) {
+                for ( var x = 0; x < maxX; x++ ) {
+                    var tempNode = new node();
+                    tempNode.node( { "x": x, "y": y, "color": "White", "nodeId": ( x + y * maxX ) } )
+                    nodes[x + y * maxX] = tempNode;
+                    tempNode = null;
+                }
+            }
+            // 4Display Array as div container
+            var table = new VisualTable();
+            table.createNodes( nodes );
+            controls();
+        }
+        //6 Algorithm main
+        function floodFill_Main( event ) {
+            var targetColor = "White";
+            var replacementColor = "Blue";
+
+            //*********************
+            //Lazy me Quick solution to click and double click on divs I am really sorry but I wanna go home...
+            nodes[event.target.id].setColor( { color: "White" } );
+            document.getElementById( event.target.id ).style.backgroundColor = nodes[event.target.id].getColor();
+
+
+            //**************
+
+
+            floodFill( { "nodeId": event.target.id, "targetColor": targetColor, "replacementColor": replacementColor } );
+        }
+
+        /*function floodFill(o) {
+            var nodeQueue =[];
+            nodeQueue.push(nodes[o.nodeId]);
+            
+            while (nodeQueue.length > 0) {
+
+                var n = nodes[nodeQueue[0].getNodeId()];
+                nodeQueue.shift();
+
+                if (n.getColor() == o.targetColor) {
+                    n.setColor({ color: o.replacementColor });
+                    document.getElementById(n.getNodeId()).style.backgroundColor = n.getColor();
+                    //west
+                    if (n.getNodeId() - 1 >= 0) {
+                        nodeQueue.push(nodes[n.getNodeId() - 1]);
+                    }
+                    //east
+                    if (n.getNodeId() + 1 >= 0) {
+                        nodeQueue.push(nodes[n.getNodeId() + 1]);
+                    }
+                    //north
+                    if (n.getNodeId() - maxX >= 0) {
+                        nodeQueue.push(nodes[n.getNodeId() - maxX]);
+                    }
+                    //south
+                    if (n.getNodeId() + maxX >= 0) {
+                        nodeQueue.push(nodes[n.getNodeId() + maxX]);
+                    }
+                
+                  
+                  
+                }
+            }
+
+        }*/
+        //http://en.wikipedia.org/wiki/Flood_fill 
+        //Interval loop so we can see what happens
+        function floodFill( o ) {
+            var nodeQueue = [];
+            nodeQueue.push( nodes[o.nodeId] );
+
+            window.setInterval( function () {
+                if ( nodeQueue.length > 0 ) {
+
+
+                    if ( QUEUE ) {
+                        //queue
+                        var n = nodes[nodeQueue[0].getNodeId()];
+                        nodeQueue.shift();
+                    } else {
+                        //stack
+                        var n = nodes[nodeQueue.pop().getNodeId()];
+                    }
+
+                    if ( n.getColor() == o.targetColor ) {
+                        n.setColor( { color: o.replacementColor } );
+                        document.getElementById( n.getNodeId() ).style.backgroundColor = n.getColor();
+                        //west
+                        if ( nodes[n.getNodeId() - 1] != undefined ) {
+                            nodeQueue.push( nodes[n.getNodeId() - 1] );
+                        }
+                        //east
+                        if ( nodes[n.getNodeId() + 1] != undefined ) {
+                            nodeQueue.push( nodes[n.getNodeId() + 1] );
+                        }
+                        //north
+                        if ( nodes[n.getNodeId() - maxX] != undefined ) {
+                            nodeQueue.push( nodes[n.getNodeId() - maxX] );
+                        }
+
+                        //south
+                        if ( nodes[n.getNodeId() + maxX] != undefined ) {
+                            nodeQueue.push( nodes[n.getNodeId() + maxX] );
+                        }
+
+                        if ( Diagonals ) {
+                            //NorthWest
+                            if ( nodes[( n.getNodeId() - 1 ) - maxX] != undefined ) {
+                                nodeQueue.push( nodes[( n.getNodeId() - 1 ) - maxX] );
+                            }
+                            //SouthWest
+                            if ( nodes[( n.getNodeId() - 1 ) + maxX] != undefined ) {
+                                nodeQueue.push( nodes[( n.getNodeId() - 1 ) + maxX] );
+                            }
+                            //NorthEast
+                            if ( nodes[( n.getNodeId() + 1 ) - maxX] != undefined ) {
+                                nodeQueue.push( nodes[( n.getNodeId() + 1 ) - maxX] );
+                            }
+                            //SouthEast
+                            if ( nodes[( n.getNodeId() + 1 ) + maxX] != undefined ) {
+                                nodeQueue.push( nodes[( n.getNodeId() + 1 ) + maxX] );
+                            }
+                        }
+                    }
+                }
+            }, 0 );
+        }
+
+        function wall( event ) {
+            nodes[event.target.id].setColor( { color: "black" } );
+            document.getElementById( event.target.id ).style.backgroundColor = nodes[event.target.id].getColor();
+        }
+
+        function controls() {
+            //create
+
+            ( function AlgorithmType() {
+
+                var type = document.createElement( 'input' );
+                type.id = 'AlgorithmType';
+                type.type = 'button';
+                type.value = "Change To Stack";
+
+                type.setAttribute( 'style', 'position: relative; top:' + ( window.outerHeight - 200 ) + 'px;' );
+                type.onclick = function () {
+                    QUEUE = !QUEUE;
+                    if ( QUEUE ) {
+                        this.value = "Change To Stack";
+                    } else {
+                        this.value = "Change To Queue";
+                    }
+                };
+                document.body.appendChild( type );
+
+            } )();
+
+
+            ( function ClearScreen() {
+
+                var type = document.createElement( 'input' );
+                type.id = 'ClearScreen';
+                type.type = 'button';
+                type.value = "Clear Screen";
+                type.setAttribute( 'style', 'position: relative; top:' + ( window.outerHeight - 200 ) + 'px;' );
+                type.onclick = function ( event ) {
+                    //Just refresh
+                    document.location.reload( true );
+                };
+                document.body.appendChild( type );
+
+            } )();
+            ( function Diagonal() {
+
+                var type = document.createElement( 'input' );
+                type.id = 'diagonal';
+                type.type = 'button';
+                type.value = "Include Diagonals";
+                type.setAttribute( 'style', 'position: relative; top:' + ( window.outerHeight - 200 ) + 'px;' );
+                type.onclick = function () {
+                    Diagonals = !Diagonals;
+                    if ( Diagonals ) {
+                        this.value = "Remove Diagonals";
+                    } else {
+                        this.value = "Include Diagonals";
+                    }
+                };
+                document.body.appendChild( type );
+
+            } )();
+
+
+        }
+    </script>
+    <style>
+        body {
+            background-color: #617378;
+            color: #e9a06c;
+        }
+
+        input {
+            width: 250px;
+            height: 50px;
+        }
+
+        #container {
+            position: absolute;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <h1>Click on box to place a wall! Double click to start the algorithm at that point!</h1>
+</body>
+</html>
