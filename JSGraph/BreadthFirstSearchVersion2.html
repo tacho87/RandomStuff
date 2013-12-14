@@ -196,6 +196,7 @@
                     for ( var x = 0; x < GlobalSetters.maxX; x++ ) {
                         var t = nodesList[x + y * GlobalSetters.maxX];
                         hdc.strokeStyle = "#e4e4e4";
+						 hdc.lineWidth = 1;
                         hdc.strokeRect( t.x * t.width, t.y * t.height, t.width, t.height );
                     }
                 }
