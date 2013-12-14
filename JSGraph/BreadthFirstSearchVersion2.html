@@ -196,27 +196,10 @@
                     for ( var x = 0; x < GlobalSetters.maxX; x++ ) {
                         var t = nodesList[x + y * GlobalSetters.maxX];
                         hdc.strokeStyle = "#e4e4e4";
-						 hdc.lineWidth = 1;
                         hdc.strokeRect( t.x * t.width, t.y * t.height, t.width, t.height );
                     }
                 }
-                
-                //Places walls
-                canvas.addEventListener( 'click', function ( e ) {                    
-                    hdc.fillStyle = "black";
-                    var This = this;
-                    var clickedNode = pick2DCoords.call( this, nodesList, canvas, e );
-                    if ( clickedNode !== undefined && clickedNode !== NodesToSearch.start && clickedNode !== NodesToSearch.goal ) {
-                        if ( clickedNode.walkable ) {
-                            clickedNode.walkable = false;
-                            hdc.fillRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
-                        } else {
-                            hdc.clearRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
-                            hdc.strokeRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
-                            clickedNode.walkable = true;
-                        }
-                    }
-                } );
+ 
 
                 //This is for adding start and end goal 
                 canvas.addEventListener( 'dblclick', function ( e ) {
@@ -239,6 +222,44 @@
 
                     }
 
+                } );
+
+                //For wall dragging!
+                var paint = false;
+
+                canvas.addEventListener( 'mousedown', function ( e ) {
+                    paint = true;
+                    hdc.fillStyle = "black";
+                    var This = this;
+                    var clickedNode = pick2DCoords.call( this, nodesList, canvas, e );
+                    if ( clickedNode !== undefined && clickedNode !== NodesToSearch.start && clickedNode !== NodesToSearch.goal ) {
+                        if ( clickedNode.walkable ) {
+                            clickedNode.walkable = false;
+                            hdc.strokeStyle = "#e4e4e4";
+                            hdc.fillStyle = '#000';
+                            hdc.fillRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                        } else {
+                            hdc.strokeStyle = "#e4e4e4";
+                            hdc.clearRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                            hdc.strokeRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                            clickedNode.walkable = true;
+                        }
+                    }
+                } );
+
+                canvas.addEventListener( 'mouseup', function () { paint = false; } );
+                canvas.addEventListener( 'mousemove', function ( e ) {
+                    if ( paint ) {
+                        var clickedNode = pick2DCoords.call( this, nodesList, canvas, e );
+                        if ( clickedNode !== undefined && clickedNode !== NodesToSearch.start && clickedNode !== NodesToSearch.goal ) {
+                            if ( clickedNode.walkable ) {
+                                clickedNode.walkable = false;
+                                hdc.strokeStyle = "#e4e4e4";
+                                hdc.fillStyle = '#000';
+                                hdc.fillRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                            }
+                        }
+                    }
                 } );
 
             };
@@ -326,25 +347,18 @@
                 if ( n === goal ) {
 
                     var makePath = function () {
-                        nodesContainer.getHdc().beginPath();
                         while ( n.parent != null ) {
-                            if ( n !== goal && n !== start ) {                                
-                                 
-                               
-                                nodesContainer.getHdc().moveTo(( n.x * n.width ) + ( n.width / 2 ), ( n.y * n.height ) + ( n.height / 2 ) );
-                                //nodesContainer.getHdc().bezierCurveTo( 140, 10, 388, 10, 388, 170 );
-                                if ( n.parent !== null ) {
-                                    nodesContainer.getHdc().lineTo(( n.parent.x * n.width ) + ( n.width / 2 ), ( n.parent.y * n.height ) + ( n.height / 2 ) );
-                                }
-                                nodesContainer.getHdc().lineWidth = 3;
-                                // line color
-                                nodesContainer.getHdc().strokeStyle = '#ffd800';
-                                nodesContainer.getHdc().stroke();
-                                
+                            if ( n !== goal && n !== start ) {
+                                nodesContainer.getHdc().fillStyle = "#0072ff";
+                                nodesContainer.getHdc().strokeStyle = "#0250b0";
+                                nodesContainer.getHdc().fillRect( n.x * n.width, n.y * n.height, n.width, n.height );
+                                nodesContainer.getHdc().strokeRect( n.x * n.width, n.y * n.height, n.width, n.height );
+
+                             
                             }
                             n = n.parent;
                         }
-                        nodesContainer.getHdc().closePath();
+
                     }
                     makePath();
                     clearInterval( mainInterval );
@@ -441,11 +455,13 @@
         <input type="button" class="btn" id="run" value="Run Pathfinding" />
         <input type="button" class="btn" id="clear" value="Clear Screen" />
         <input type="button" class="btn" id="gridSize" value="Change Grid Size" />
+       
         <div id="info" class="info">
             <h4>Breadth First Search</h4>
             <p>JavaScript (Canvas) Implementation by <strong>Anastacio Gianareas</strong></p>
             <p>Instructions: Place a wall (Click), Place Start and Goal (Double Click), Press Run</p>
-            <p>You are more than welcome to use the code for learning! (Note this is just a basic implantation, so no optimizations)<img src="http://hitwebcounter.com/counter/counter.php?page=5220718&style=0007&nbdigits=4&type=page&initCount=0"   border="0" ></p>
+            <p>You are more than welcome to use the code for learning! (Note this is just a basic implantation, so no optimizations</p>
+            
         </div>
     </div>
     <canvas id="canvas" class="canvas" width="950" height="600"></canvas>
