@@ -325,15 +325,11 @@
                 if ( n === goal ) {
 
                     var makePath = function () {
+                        nodesContainer.getHdc().beginPath();
                         while ( n.parent != null ) {
-                            if ( n !== goal && n !== start ) {
-                                nodesContainer.getHdc().fillStyle = "#0072ff";
-                                nodesContainer.getHdc().strokeStyle = "#0250b0";
-                                nodesContainer.getHdc().fillRect( n.x * n.width, n.y * n.height, n.width, n.height );
-                                nodesContainer.getHdc().strokeRect( n.x * n.width, n.y * n.height, n.width, n.height );
-
-                                /*Splines Experiment 
-                                nodesContainer.getHdc().beginPath();
+                            if ( n !== goal && n !== start ) {                                
+                                 
+                               
                                 nodesContainer.getHdc().moveTo(( n.x * n.width ) + ( n.width / 2 ), ( n.y * n.height ) + ( n.height / 2 ) );
                                 //nodesContainer.getHdc().bezierCurveTo( 140, 10, 388, 10, 388, 170 );
                                 if ( n.parent !== null ) {
@@ -343,11 +339,11 @@
                                 // line color
                                 nodesContainer.getHdc().strokeStyle = '#ffd800';
                                 nodesContainer.getHdc().stroke();
-                                //nodesContainer.getHdc().closePath();*/
+                                
                             }
                             n = n.parent;
                         }
-
+                        nodesContainer.getHdc().closePath();
                     }
                     makePath();
                     clearInterval( mainInterval );
@@ -448,7 +444,7 @@
             <h4>Breadth First Search</h4>
             <p>JavaScript (Canvas) Implementation by <strong>Anastacio Gianareas</strong></p>
             <p>Instructions: Place a wall (Click), Place Start and Goal (Double Click), Press Run</p>
-            <p>You are more than welcome to use the code for learning! (Note this is just a basic implantation, so no optimizations</p>
+            <p>You are more than welcome to use the code for learning! (Note this is just a basic implantation, so no optimizations)<img src="http://hitwebcounter.com/counter/counter.php?page=5220718&style=0007&nbdigits=4&type=page&initCount=0"   border="0" ></p>
         </div>
     </div>
     <canvas id="canvas" class="canvas" width="950" height="600"></canvas>
