@@ -196,6 +196,7 @@
                     for ( var x = 0; x < GlobalSetters.maxX; x++ ) {
                         var t = nodesList[x + y * GlobalSetters.maxX];
                         hdc.strokeStyle = "#e4e4e4";
+                        hdc.lineWidth = 1;
                         hdc.strokeRect( t.x * t.width, t.y * t.height, t.width, t.height );
                     }
                 }
@@ -347,18 +348,25 @@
                 if ( n === goal ) {
 
                     var makePath = function () {
+                        nodesContainer.getHdc().beginPath();
                         while ( n.parent != null ) {
                             if ( n !== goal && n !== start ) {
-                                nodesContainer.getHdc().fillStyle = "#0072ff";
-                                nodesContainer.getHdc().strokeStyle = "#0250b0";
-                                nodesContainer.getHdc().fillRect( n.x * n.width, n.y * n.height, n.width, n.height );
-                                nodesContainer.getHdc().strokeRect( n.x * n.width, n.y * n.height, n.width, n.height );
 
-                             
+
+                                nodesContainer.getHdc().moveTo(( n.x * n.width ) + ( n.width / 2 ), ( n.y * n.height ) + ( n.height / 2 ) );
+                                //nodesContainer.getHdc().bezierCurveTo( 140, 10, 388, 10, 388, 170 );
+                                if ( n.parent !== null ) {
+                                    nodesContainer.getHdc().lineTo(( n.parent.x * n.width ) + ( n.width / 2 ), ( n.parent.y * n.height ) + ( n.height / 2 ) );
+                                }
+                                nodesContainer.getHdc().lineWidth = 3;
+                                // line color
+                                nodesContainer.getHdc().strokeStyle = '#ffd800';
+                                nodesContainer.getHdc().stroke();
+
                             }
                             n = n.parent;
                         }
-
+                        nodesContainer.getHdc().closePath();
                     }
                     makePath();
                     clearInterval( mainInterval );
