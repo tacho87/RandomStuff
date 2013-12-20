@@ -1,0 +1,608 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+
+    <script>
+
+        //Anastacio Gianareas
+
+
+        window.onload = function () {
+            main();
+        };
+
+        //Object (structure) for setting up the nodes. Change this directly from your DOM and recreate grid by calling the NodeContext() methods
+        var GlobalSetters = {
+            maxY: 40,
+            maxX: 40,
+            nodeWidth: 30,
+            nodeHeight: 30
+        };
+
+        //Object for holding start and goal. This is not the best option if being used for a game project.
+        var NodesToSearch = {
+            start: null,
+            goal: null
+        };
+
+        //Main function (Start here)
+        function main() {
+            var nodesContainer = new NodeContext( 'canvas' );
+            nodesContainer.generateNodeList();
+            nodesContainer.drawNodes();
+
+
+            //controls
+            var run = document.getElementById( 'run' );
+            run.onclick = function () {
+                Algorithms( nodesContainer );
+            };
+
+            var clear = document.getElementById( 'clear' );
+            clear.onclick = function () {
+                nodesContainer.deleteNodeList();
+                delete nodesContainer;
+                NodesToSearch.start = null;
+                NodesToSearch.goal = null;
+                main();
+            };
+
+            var setupGrid = document.getElementById( 'gridSize' );
+            setupGrid.onclick = function () {
+                GlobalSetters.maxX = parseInt( prompt( 'Set maxX: (How many columns)', GlobalSetters.maxX ) );
+                GlobalSetters.maxY = parseInt( prompt( 'Set maxY: (How many rows)', GlobalSetters.maxY ) );
+                GlobalSetters.nodeWidth = parseInt( prompt( 'Set width: (square width size)', GlobalSetters.nodeWidth ) );
+                GlobalSetters.nodeHeight = parseInt( prompt( 'Set height: (square height size)', GlobalSetters.nodeHeight ) );
+                var c = document.getElementById( 'clear' );
+                c.onclick.apply( c ); //Executes clear btn onclick function. I always forget!
+            }
+
+        }
+
+        //Node class which holds basic info of only one node and its current neighbors. Note: if a neighbor node doesn't exist it will hold a null value. In your algorithm check for nulls before using that node. Works diagonals.
+        function Node() {
+            this.id;
+            this.x;
+            this.y;
+            this.width = 50;
+            this.height = 50;
+            this.neightbors = [];
+            this.color;
+            this.parent = null;
+            //this.visited = false; //Used in other examples.ignore
+            this.walkable = true; //not using it for A* and dijkstra
+            this.weight = 0.5; //If its 1.0 or more is a wall, dont let it go less than 0 (Negative graphs). Also this is important for heightmap representation
+            //this.internalVisited = false; //Used as a hack in other examples. ignore
+            this.heuristicCost = null;
+            //Weighted
+            this.f; //total for f = g +h and use f as heuristic
+            this.g; //initial cost from starting node to the current node.
+            this.inOpen = false;
+            this.inClosed = false;
+
+        }
+
+        //Main Class controller. Holds main array of nodes, it has multiple utilities methods for node creation and deletion
+        function NodeContext( canvasID ) {
+            var nodesList = [];
+            var canvas = document.getElementById( canvasID ); //We want to be able to create multiple nodes container
+            var hdc = canvas.getContext( '2d' );
+
+
+            this.getHdc = function () {
+                return hdc;
+            }
+            this.getCanvas = function () {
+                return canvas;
+            }
+            var getNodeList = function () {
+                return nodesList;
+            }
+            this.generateNodeList = function () {
+                for ( var y = 0; y < GlobalSetters.maxY; y++ ) {
+                    for ( var x = 0; x < GlobalSetters.maxX; x++ ) {
+                        var tempNode = new Node();
+                        tempNode.id = x + y * GlobalSetters.maxX;
+                        tempNode.x = x;
+                        tempNode.y = y;
+                        tempNode.width = GlobalSetters.nodeWidth;
+                        tempNode.height = GlobalSetters.nodeHeight;
+                        nodesList[x + y * GlobalSetters.maxX] = tempNode;
+                        tempNode = null;
+                    }
+                }
+                //Set Neighbors 
+                for ( var y = 0; y < GlobalSetters.maxY; y++ ) {
+                    for ( var x = 0; x < GlobalSetters.maxX; x++ ) {
+                        var t = nodesList[x + y * GlobalSetters.maxX];
+
+                        //north
+                        if ( y == 0 ) {
+                            t.neightbors.push( null );
+                        }
+                        else {
+                            t.neightbors.push( nodesList[t.id - GlobalSetters.maxX] );
+                        }
+
+                        //South
+                        if ( y == GlobalSetters.maxY - 1 ) {
+                            t.neightbors.push( null );
+                        }
+                        else {
+                            t.neightbors.push( nodesList[t.id + GlobalSetters.maxX] );
+                        }
+
+                        //East
+                        if ( x == GlobalSetters.maxX - 1 ) {
+                            t.neightbors.push( null );
+                        }
+                        else {
+                            t.neightbors.push( nodesList[t.id + 1] );
+                        }
+
+                        //West
+                        if ( x == 0 ) {
+                            t.neightbors.push( null );
+                        }
+                        else {
+                            t.neightbors.push( nodesList[t.id - 1] );
+                        }
+
+                        //Diagonals
+
+                        //NorthEast
+                        if ( y == 0 || x == GlobalSetters.maxX - 1 ) {
+                            t.neightbors.push( null );
+                        } else {
+                            t.neightbors.push( nodesList[( t.id + 1 ) - GlobalSetters.maxX] );
+                        }
+                        //NorthWest
+                        if ( y == 0 || x == 0 ) {
+                            t.neightbors.push( null );
+                        } else {
+                            t.neightbors.push( nodesList[( t.id - 1 ) - GlobalSetters.maxX] );
+                        }
+
+                        //SouthEast
+                        if ( y == GlobalSetters.maxY - 1 || x == GlobalSetters.maxX - 1 ) {
+                            t.neightbors.push( null );
+                        } else {
+                            t.neightbors.push( nodesList[( t.id + 1 ) + GlobalSetters.maxX] );
+                        }
+
+                        //SouthWest
+                        if ( y == GlobalSetters.maxY - 1 || x == 0 ) {
+                            t.neightbors.push( null );
+                        } else {
+                            t.neightbors.push( nodesList[( t.id - 1 ) + GlobalSetters.maxX] );
+                        }
+
+                        nodesList[x + y * GlobalSetters.maxX].neightbors = t.neightbors;
+                        t = null;
+                    }
+                }
+            };
+
+            this.deleteNodeList = function () {
+                nodesList = null;
+                hdc.clearRect( 0, 0, 950, 600 );
+
+                NodesToSearch.start = null;
+                NodesToSearch.goal = null;
+                canvas.removeEventListener( 'click' );
+                canvas.removeEventListener( 'dblclick' );
+                canvas = null;
+
+            };
+
+            this.drawNodes = function () {
+                for ( var y = 0; y < GlobalSetters.maxY; y++ ) {
+                    for ( var x = 0; x < GlobalSetters.maxX; x++ ) {
+                        var t = nodesList[x + y * GlobalSetters.maxX];
+                        hdc.strokeStyle = "#e4e4e4";
+                        hdc.lineWidth = 1;
+                        hdc.strokeRect( t.x * t.width, t.y * t.height, t.width, t.height );
+                    }
+                }
+
+
+                //This is for adding start and end goal 
+                canvas.addEventListener( 'dblclick', function ( e ) {
+                    var This = this;
+                    var dblclickNode = pick2DCoords.call( this, nodesList, canvas, e );
+                    if ( dblclickNode !== undefined ) {
+                        if ( NodesToSearch.start == null ) {
+                            NodesToSearch.start = dblclickNode;
+                            NodesToSearch.start.walkable = true;
+                            hdc.strokeStyle = "#e4e4e4";
+                            hdc.fillStyle = "#4cff00";
+                            hdc.fillRect( NodesToSearch.start.x * NodesToSearch.start.width, NodesToSearch.start.y * NodesToSearch.start.height, NodesToSearch.start.width, NodesToSearch.start.height );
+                        }
+                        else if ( NodesToSearch.goal == null ) {
+                            NodesToSearch.goal = dblclickNode;
+                            NodesToSearch.goal.walkable = true;
+                            hdc.strokeStyle = "#e4e4e4";
+                            hdc.fillStyle = "red";
+                            hdc.fillRect( NodesToSearch.goal.x * NodesToSearch.goal.width, NodesToSearch.goal.y * NodesToSearch.goal.height, NodesToSearch.goal.width, NodesToSearch.goal.height );
+                        }
+                    }
+                } );
+
+
+
+
+                //For wall dragging!
+                var paint = false;
+
+                canvas.addEventListener( 'mousedown', function ( e ) {
+                    paint = true;
+                    hdc.fillStyle = "black";
+                    var This = this;
+                    var clickedNode = pick2DCoords.call( this, nodesList, canvas, e );
+                    if ( clickedNode !== undefined && clickedNode !== NodesToSearch.start && clickedNode !== NodesToSearch.goal ) {
+                        if ( clickedNode.walkable ) {
+                            clickedNode.walkable = false;
+                            clickedNode.weight = 1.0;
+                            hdc.strokeStyle = "#e4e4e4";
+                            hdc.fillStyle = '#000';
+                            hdc.fillRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                        } else {
+                            hdc.strokeStyle = "#e4e4e4";
+                            clickedNode.weight = 0.5;
+                            hdc.clearRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                            hdc.strokeRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                            clickedNode.walkable = true;
+                        }
+                    }
+                } );
+
+
+
+                canvas.addEventListener( 'mouseup', function () { paint = false; } );
+                canvas.addEventListener( 'mousemove', function ( e ) {
+                    if ( paint ) {
+                        var clickedNode = pick2DCoords.call( this, nodesList, canvas, e );
+                        if ( clickedNode !== undefined && clickedNode !== NodesToSearch.start && clickedNode !== NodesToSearch.goal ) {
+                            if ( clickedNode.walkable ) {
+                                clickedNode.walkable = false;
+                                clickedNode.weight = 1.0;
+                                hdc.strokeStyle = "#e4e4e4";
+                                hdc.fillStyle = '#000';
+                                hdc.fillRect( clickedNode.x * clickedNode.width, clickedNode.y * clickedNode.height, clickedNode.width, clickedNode.height );
+                            }
+                        }
+                    }
+                } );
+
+
+
+
+
+            };
+
+        }//End of nodeContext
+
+
+
+
+        /* HELPER OBJECTS */
+
+        function pick2DCoords( n, cvnObject, e ) {
+            var rect = cvnObject.getBoundingClientRect();
+            var x = parseInt(( e.pageX - rect.left ), 10 );
+            var y = parseInt(( e.pageY - rect.top ), 10 );
+            console.log( 'click: ' + x + '/' + y );
+            //convert this to binary searching when optimizing!
+            for ( var i = 0; i < n.length; i++ ) {
+                var left = n[i].x * n[i].width;
+                var right = n[i].x * n[i].width + n[i].width;
+                var top = n[i].y * n[i].height;
+                var bottom = n[i].y * n[i].height + n[i].height;
+
+                if ( right >= x
+                    && left <= x
+                    && bottom >= y
+                    && top <= y ) {
+                    console.log( 'NodeId: ' + n[i].id );
+                    return n[i];
+                }
+            }
+        };
+
+
+        var helpers = {
+            manhattan: function ( start, end ) {
+                var startX = start.x * start.width;
+                var endX = end.x * end.width;
+                var startY = start.y * end.height;
+                var endY = end.y * end.height;
+
+                return parseInt( Math.abs( endX - startX ) + Math.abs( endY - startY ), 10 );
+            },
+            euclidean: function ( start, end ) {
+                var startX = start.x * start.width;
+                var endX = end.x * end.width;
+                var startY = start.y * end.height;
+                var endY = end.y * end.height;
+
+                //THIS IS SLOW, BUT ITS FINE FOR THIS EXMAPLE. One optimization is to multiple * multiple instead of pow!
+                var result = Math.pow(( startX - endX ), 2 ) + Math.pow(( startY - endY ), 2 );
+                return parseInt( Math.sqrt( result ), 10 );
+            }
+        };
+
+
+        /*END OF HELPERS */
+
+
+
+
+
+
+
+
+        //The algorithm object, place your algorithm here
+        function Algorithms( nodesContainer ) {
+            if ( NodesToSearch.start != null && NodesToSearch.goal != null ) {
+                dijkstra( nodesContainer, NodesToSearch.start, NodesToSearch.goal )
+            }
+        }
+        function dijkstra( nodesContainer, start, goal ) {
+
+
+            //No need for a closed list, attached a closed boolean to each node like 
+            // node.prototype.inClosed = false;
+
+
+            //resetting nodes
+            for ( var i = 0; i < nodesContainer.length; i++ ) {
+                nodesContainer[i].f = Number.MAX_VALUE;
+                nodesContainer[i].g = Number.MAX_VALUE;
+                nodesContainer[i].inOpen = false;
+                nodesContainer[i].inClosed = false;
+                nodeContainer[i].parent = null;
+            }
+
+            var openQueue = new priorityQueue();
+            start.g = 0;
+            start.f = helpers.manhattan( start, goal ); 
+            start.inOpen = true;
+            start.parent = null
+            openQueue.push( start, start.f );
+
+            var found = false;
+
+            var intervalLoop = setInterval( function () {
+                if ( found || openQueue.length() <= 0 ) {
+                    clearInterval( intervalLoop );
+                    return false;
+                }
+
+                var n = openQueue.popMin();
+
+                if ( n == null ) {
+                    clearInterval( intervalLoop );
+                    return false;
+                }
+
+                n.inOpen = false;
+
+                //Change color so we can follow searching path
+                if ( n !== goal && n !== start && n.weight < 1.0 ) {
+
+                    nodesContainer.getHdc().strokeStyle = "#0072ff";
+                    nodesContainer.getHdc().fillStyle = "#ededed";
+                    nodesContainer.getHdc().strokeRect( n.x * n.width, n.y * n.height, n.width, n.height ); nodesContainer.getHdc().fillRect( n.x * n.width, n.y * n.height, n.width, n.height );
+
+                }
+                if ( n === goal ) {
+                    var makePath = function () {
+                        nodesContainer.getHdc().beginPath();
+                        while ( n.parent !== null && n !== start ) {
+
+                            nodesContainer.getHdc().moveTo(( n.x * n.width ) + ( n.width / 2 ), ( n.y * n.height ) + ( n.height / 2 ) );
+                            //nodesContainer.getHdc().bezierCurveTo( 140, 10, 388, 10, 388, 170 );
+                            if ( n.parent !== null ) {
+                                nodesContainer.getHdc().lineTo(( n.parent.x * n.width ) + ( n.width / 2 ), ( n.parent.y * n.height ) + ( n.height / 2 ) );
+                            }
+                            nodesContainer.getHdc().lineWidth = 3;
+                            // line color
+                            nodesContainer.getHdc().strokeStyle = '#ffd800';
+                            nodesContainer.getHdc().stroke();
+
+
+                            n = n.parent;
+                        }
+                        nodesContainer.getHdc().closePath();
+                    }
+                    clearInterval( intervalLoop );
+                    makePath();
+
+                    return true;
+                }
+                else {
+
+                    for ( var i = 0; i < n.neightbors.length; i++ ) {
+                        var child = n.neightbors[i];
+
+
+                        //if ( child != null && child.walkable === true ) {
+                        if ( child != null && child.weight < 1.0 ) {
+                            var cost = 1.0;
+                            //This will only work because I added diagonals after position 4. Hardcoded.
+                            if ( i > 3 ) {
+                                cost = 1.41;
+                            }
+                            cost += child.weight; //for different terrains
+
+                            var inlist = false;
+                            var newG = n.g + cost;
+                           
+                            var newF = newG;
+                            
+
+                            if ( child.inOpen || child.inClosed ) {
+
+                                if ( newF < child.f ) {
+                                    child.g = newG;
+                                    child.f = newF;
+                                    child.parent = n;
+                                }
+                                inlist = true;
+                            }
+
+                            if ( !inlist ) {
+                                child.f = newF;
+                                child.g = newG;
+                                child.parent = n;
+                                child.inOpen = true;
+                                openQueue.push( child, child.f );
+
+                            }
+                        }
+
+                    }
+                    n.inClosed = true;
+                }
+
+            }, 10 );//End loop
+        }
+
+
+
+
+
+
+        //Not using heap structure. This is a basic inefficient priority queue which serves the purpose perfectly. 
+        function priorityQueue() {
+
+            var list = [];
+            this.push = function ( object, number ) {
+                var o = {
+                    data: object,
+                    priority: number
+                }
+                list.push( o );
+            }
+            this.popMin = function () {
+                if ( list.length > 0 ) {
+                    var priority = list[0];
+                    var index = list.indexOf( priority )
+                    for ( var i = 0; i < list.length; i++ ) {
+                        var t = list[i];
+                        if ( t.priority < priority.priority ) {
+                            priority = t;
+                            index = list.indexOf( priority );
+                        }
+                    }
+                    list.splice( index, 1 );
+                    return priority.data;
+                } else {
+                    return null;
+                }
+            };
+            this.popMax = function () {
+                if ( list.length > 0 ) {
+                    var priority = list[0];
+                    var index = list.indexOf( priority )
+                    for ( var i = 0; i < list.length; i++ ) {
+                        var t = list[i];
+                        if ( t.priority > priority.priority ) {
+                            priority = t;
+                            index = list.indexOf( priority );
+                        }
+                    }
+                    list.splice( index, 1 );
+                    return priority.data;
+                } else {
+                    return null;
+                }
+            };
+
+            this.length = function () {
+                return list.length;
+            };
+            this.isInside = function ( o ) {
+                for ( var i = 0 ; i < list.length; i++ ) {
+                    if ( list[i].data === o ) {
+                        return true;
+                    }
+
+                }
+                return false;
+            };
+
+            this.removeItem = function ( o ) {
+                for ( var i = 0 ; i < list.length; i++ ) {
+                    if ( list[i].data === o ) {
+                        list.splice( list[i], 1 );
+                    }
+                }
+
+            };
+
+        }
+
+
+    </script>
+
+    <style>
+        .body {
+            color: #393939;
+            font-family: 'Lucida Sans Unicode', sans-serif;
+        }
+
+        .canvas {
+            -ms-user-select: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            background-color: #fff;
+            border: solid 6px #00cbf8;
+        }
+
+        .btn {
+            border-radius: 4px;
+            color: #000;
+            background-color: #f2f2f2;
+            font-size: 14px;
+            padding: 8px 20px;
+            margin: 10px;
+            text-decoration: none;
+        }
+
+            .btn:hover {
+                color: #ffd800;
+                background-color: #000;
+            }
+
+        .info {
+            background-color: #f2f2f2;
+            padding: 8px;
+            margin: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="nodeContainer">
+        <input type="button" class="btn" id="run" value="Run Pathfinding" />
+        <input type="button" class="btn" id="clear" value="Clear Screen" />
+        <input type="button" class="btn" id="gridSize" value="Change Grid Size" />        
+        <div id="info" class="info">
+            <h4>Dijkstra Pathfinding (Graph) Implementation</h4>
+            <p>JavaScript (Canvas) Implementation by <strong>Anastacio Gianareas</strong></p>
+            <p>Instructions: Place a wall (Hold Click + Drag. Click to clear wall), Place Start and Goal (Double Click), Press Run</p>
+            <p>You are more than welcome to use the code for learning! (Note this is just a basic implantation, so no optimizations</p>
+
+        </div>
+    </div>
+    <canvas id="canvas" class="canvas" width="950" height="600"></canvas>
+</body>
+</html>
