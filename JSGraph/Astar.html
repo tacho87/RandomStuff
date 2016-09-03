@@ -295,7 +295,7 @@
             var x = parseInt(( e.pageX - rect.left ), 10 );
             var y = parseInt(( e.pageY - rect.top ), 10 );
             console.log( 'click: ' + x + '/' + y );
-            //convert this to binary searching when optimizing!
+            //O(N)
             for ( var i = 0; i < n.length; i++ ) {
                 var left = n[i].x * n[i].width;
                 var right = n[i].x * n[i].width + n[i].width;
